@@ -8,6 +8,13 @@ All dates in this document are approximate.
 
 ## Changes
 
+20220114: The [extruder](Config_Reference.md#extruder) `shared_heater`
+parameter is deprecated. It will be removed in the near future.
+Replace extruder config sections using a shared_heater with
+[extruder_stepper](Config_Reference.md#extruder_stepper) config
+sections and update any activation macros to use
+[SYNC_STEPPER_TO_EXTRUDER](G-Codes.md#extended-g-code-commands).
+
 20211230: Scripts to tune input shaper (`scripts/calibrate_shaper.py`
 and `scripts/graph_accelerometer.py`) were migrated to use Python3
 by default. As a result, users must install Python3 versions of certain
