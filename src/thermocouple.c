@@ -14,13 +14,14 @@
 #include "spicmds.h" // spidev_transfer
 
 enum {
-    TS_CHIP_MAX31855, TS_CHIP_MAX31856, TS_CHIP_MAX31865, TS_CHIP_MAX6675
+    TS_CHIP_MAX31855, TS_CHIP_MAX31856, TS_CHIP_MAX31865, TS_CHIP_MAX6675, TS_CHIP_ADS1118
 };
 
 DECL_ENUMERATION("thermocouple_type", "MAX31855", TS_CHIP_MAX31855);
 DECL_ENUMERATION("thermocouple_type", "MAX31856", TS_CHIP_MAX31856);
 DECL_ENUMERATION("thermocouple_type", "MAX31865", TS_CHIP_MAX31865);
 DECL_ENUMERATION("thermocouple_type", "MAX6675", TS_CHIP_MAX6675);
+DECL_ENUMERATION("thermocouple_type", "ADS1118", TS_CHIP_ADS1118);
 
 struct thermocouple_spi {
     struct timer timer;
@@ -51,7 +52,7 @@ void
 command_config_thermocouple(uint32_t *args)
 {
     uint8_t chip_type = args[2];
-    if (chip_type > TS_CHIP_MAX6675)
+    if (chip_type > TS_CHIP_ADS1118)
         shutdown("Invalid thermocouple chip type");
     struct thermocouple_spi *spi = oid_alloc(
         args[0], command_config_thermocouple, sizeof(*spi));
@@ -150,7 +151,7 @@ thermocouple_handle_max31865(struct thermocouple_spi *spi
 
 static void
 thermocouple_handle_max6675(struct thermocouple_spi *spi
-                            , uint32_t next_begin_time, uint8_t oid)
+        , uint32_t next_begin_time, uint8_t oid)
 {
     uint8_t msg[2] = { 0x00, 0x00};
     spidev_transfer(spi->spi, 1, sizeof(msg), msg);
@@ -162,6 +163,74 @@ thermocouple_handle_max6675(struct thermocouple_spi *spi
     if (value & 0x04)
         try_shutdown("Thermocouple reader fault");
 }
+uint16_t ads_cold = 0;
+uint16_t ads_t1 = 0;
+static void
+thermocouple_handle_ads1118(struct thermocouple_spi *spi
+        , uint32_t next_begin_time, uint8_t oid)
+{
+    static uint16_t ads_t0 = 0;
+    static uint8_t ads_mux = 0;
+    static uint8_t ads_loop_cnt = 0;
+    static uint8_t ads_cold_cnt = 0;
+
+    uint8_t msg[3] [4] =
+    {
+        {0x00 , 0x00 , 0x0c , 0x9a }, // 0x0c9a = ch Cold pullup 128SPS Continuous
+        {0x0c , 0x8a , 0x0c , 0x8a }, // 0x0c8a = ch 0 and 1 pullup 128SPS Continuous ±0.256 V
+        {0x00 , 0x00 , 0x3c , 0x8a }  // 2 and 3 pullup 128SPS Continuous ±0.256 V
+    };
+
+    spidev_transfer(spi->spi, 1, sizeof(msg[ads_mux]), msg[ads_mux]);
+    uint32_t value;
+    memcpy(&value, msg[ads_mux], sizeof(value));
+    value = be32_to_cpu(value) ;
+
+    if (ads_loop_cnt < 1 )
+    {
+        ads_loop_cnt++;
+    }
+    else
+    {
+        ads_loop_cnt = 0;
+        //sendf("debug#######  value=%hu" , ads_mux   );
+        value = (value >> 18) & 0x3fff;
+
+        if (ads_mux == 0)
+		{
+			if (ads_cold_cnt <1 ) //update cold about every min
+            {
+                ads_cold = (uint16_t)value * 0.05;
+                //sendf("debug_ads_cold  value=%hu" , ads_cold   );
+                ads_mux = 1;
+                ads_cold_cnt = 31;
+            }
+            else
+                ads_mux = 1;
+            ads_cold_cnt--;
+        }
+        else if (ads_mux == 1)
+        {
+            if (0x2000 & value)
+            {
+                ads_t0 =(uint16_t)( ads_cold - (0x1fff & (~(value - 1)))); // negitive temp
+            } else
+                ads_t0 = (uint16_t)(value + ads_cold);
+            ads_mux = 2;
+		}
+        else if (ads_mux == 2)
+        {
+            if (0x2000 & value)
+            {
+                ads_t1 =(uint16_t)( ads_cold - (0x1fff & (~(value - 1)))); // negitive temp
+            } else
+                ads_t1 = (uint16_t)(value + ads_cold);
+            ads_mux = 0;
+        }
+        thermocouple_respond(spi, next_begin_time, ads_t0, 0, oid);
+	}
+}
+
 
 // task to read thermocouple and send response
 void
@@ -191,6 +260,9 @@ thermocouple_task(void)
         case TS_CHIP_MAX6675:
             thermocouple_handle_max6675(spi, next_begin_time, oid);
             break;
+	     case TS_CHIP_ADS1118:
+	    thermocouple_handle_ads1118(spi, next_begin_time, oid);
+	    break;
         }
     }
 }
