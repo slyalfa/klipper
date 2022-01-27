@@ -258,6 +258,23 @@ class ADS1118(SensorBase):
         adc = adc << ADS1118_SCALE
         return adc
 
+# ADS1118B thermocouple
+
+class ADS1118B(SensorBase):
+    def __init__(self, config):
+        SensorBase.__init__(self, config, "ADS1118B", spi_mode=0)
+    def calc_temp(self, adc, fault):
+        # Fix sign bit:
+        if adc & 0x2000:
+            adc = ((adc & 0x1FFF) + 1) * -1
+        temp = ADS1118_MULT * adc
+        return temp
+    def calc_adc(self, temp):
+        adc = int( ( temp / ADS1118_MULT ) + 0.5 ) # convert to ADC value
+        adc = adc << ADS1118_SCALE
+        return adc
+
+
 
 ######################################################################
 # MAX31865 (RTD sensor)
@@ -355,6 +372,7 @@ Sensors = {
     "MAX31856": MAX31856,
     "MAX31865": MAX31865,
     "ADS1118": ADS1118,
+    "ADS1118B": ADS1118B,
 }
 
 def load_config(config):

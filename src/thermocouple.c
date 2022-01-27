@@ -14,7 +14,7 @@
 #include "spicmds.h" // spidev_transfer
 
 enum {
-    TS_CHIP_MAX31855, TS_CHIP_MAX31856, TS_CHIP_MAX31865, TS_CHIP_MAX6675, TS_CHIP_ADS1118
+    TS_CHIP_MAX31855, TS_CHIP_MAX31856, TS_CHIP_MAX31865, TS_CHIP_MAX6675, TS_CHIP_ADS1118, TS_CHIP_ADS1118B
 };
 
 DECL_ENUMERATION("thermocouple_type", "MAX31855", TS_CHIP_MAX31855);
@@ -22,6 +22,7 @@ DECL_ENUMERATION("thermocouple_type", "MAX31856", TS_CHIP_MAX31856);
 DECL_ENUMERATION("thermocouple_type", "MAX31865", TS_CHIP_MAX31865);
 DECL_ENUMERATION("thermocouple_type", "MAX6675", TS_CHIP_MAX6675);
 DECL_ENUMERATION("thermocouple_type", "ADS1118", TS_CHIP_ADS1118);
+DECL_ENUMERATION("thermocouple_type", "ADS1118B", TS_CHIP_ADS1118B);
 
 struct thermocouple_spi {
     struct timer timer;
@@ -52,7 +53,7 @@ void
 command_config_thermocouple(uint32_t *args)
 {
     uint8_t chip_type = args[2];
-    if (chip_type > TS_CHIP_ADS1118)
+    if (chip_type > TS_CHIP_ADS1118B)
         shutdown("Invalid thermocouple chip type");
     struct thermocouple_spi *spi = oid_alloc(
         args[0], command_config_thermocouple, sizeof(*spi));
@@ -230,6 +231,12 @@ thermocouple_handle_ads1118(struct thermocouple_spi *spi
         thermocouple_respond(spi, next_begin_time, ads_t0, 0, oid);
 	}
 }
+static void
+thermocouple_handle_ads1118B(struct thermocouple_spi *spi
+        , uint32_t next_begin_time, uint8_t oid)
+{
+    thermocouple_respond(spi, next_begin_time, ads_t1, 0, oid);
+    }
 
 
 // task to read thermocouple and send response
@@ -260,9 +267,12 @@ thermocouple_task(void)
         case TS_CHIP_MAX6675:
             thermocouple_handle_max6675(spi, next_begin_time, oid);
             break;
-	     case TS_CHIP_ADS1118:
-	    thermocouple_handle_ads1118(spi, next_begin_time, oid);
-	    break;
+        case TS_CHIP_ADS1118:
+            thermocouple_handle_ads1118(spi, next_begin_time, oid);
+            break;
+        case TS_CHIP_ADS1118B:
+            thermocouple_handle_ads1118B(spi, next_begin_time, oid);
+            break;
         }
     }
 }
