@@ -255,6 +255,9 @@ ADS1118_MULT = 0.6288
 class ADS1118(SensorBase):
     def __init__(self, config):
         SensorBase.__init__(self, config, "ADS1118", spi_mode=0)
+    def handle_fault(self, adc, fault):
+        if fault & 0x02:
+            self.report_fault("ADS1118 : fault error")
     def calc_temp(self, adc, fault):
         # Fix sign bit:
         if adc & 0x2000:
@@ -271,6 +274,9 @@ class ADS1118(SensorBase):
 class ADS1118B(SensorBase):
     def __init__(self, config):
         SensorBase.__init__(self, config, "ADS1118B", spi_mode=0)
+    def handle_fault(self, adc, fault):
+        if fault & 0x02:
+            self.report_fault("ADS1118 : fault error")
     def calc_temp(self, adc, fault):
         # Fix sign bit:
         if adc & 0x2000:
