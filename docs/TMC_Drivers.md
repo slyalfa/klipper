@@ -45,7 +45,7 @@ leave a stepper idle sufficiently long.
 
 If one wishes to reduce current to motors during print start routines,
 then consider issuing
-[SET_TMC_CURRENT](G-Codes.md#tmc-stepper-drivers) commands in a
+[SET_TMC_CURRENT](G-Codes.md#set_tmc_current) commands in a
 [START_PRINT macro](Slicers.md#klipper-gcode_macro) to adjust the
 current before and after normal printing moves.
 
@@ -267,10 +267,11 @@ For tmc2130, tmc5160, and tmc2660:
 SET_TMC_FIELD STEPPER=stepper_x FIELD=sgt VALUE=-64
 ```
 
-Then issue a `G28 X0` command and verify the axis does not move at
-all. If the axis does move, then issue an `M112` to halt the printer -
-something is not correct with the diag/sg_tst pin wiring or
-configuration and it must be corrected before continuing.
+Then issue a `G28 X0` command and verify the axis does not move at all
+or quickly stops moving. If the axis does not stop, then issue an
+`M112` to halt the printer - something is not correct with the
+diag/sg_tst pin wiring or configuration and it must be corrected
+before continuing.
 
 Next, continually decrease the sensitivity of the `VALUE` setting and
 run the `SET_TMC_FIELD` `G28 X0` commands again to find the highest
@@ -408,12 +409,29 @@ restrictions:
    limit (which may skew the stall detection). The pause is necessary
    to ensure the driver's stall flag is cleared prior to homing again.
 
+An example CoreXY homing macro might look like:
+```
+[gcode_macro HOME]
+gcode:
+    G90
+    # Home Z
+    G28 Z0
+    G1 Z10 F1200
+    # Home Y
+    G28 Y0
+    G1 Y5 F1200
+    # Home X
+    G4 P2000
+    G28 X0
+    G1 X5 F1200
+```
+
 ## Querying and diagnosing driver settings
 
-The `[DUMP_TMC command](G-Codes.md#tmc-stepper-drivers) is a useful
-tool when configuring and diagnosing the drivers. It will report all
-fields configured by Klipper as well as all fields that can be queried
-from the driver.
+The `[DUMP_TMC command](G-Codes.md#dump_tmc) is a useful tool when
+configuring and diagnosing the drivers. It will report all fields
+configured by Klipper as well as all fields that can be queried from
+the driver.
 
 All of the reported fields are defined in the Trinamic datasheet for
 each driver. These datasheets can be found on the
@@ -429,7 +447,7 @@ Klipper supports configuring many low-level driver fields using
 has the full list of fields available for each type of driver.
 
 In addition, almost all fields can be modified at run-time using the
-[SET_TMC_FIELD command](G-Codes.md#tmc-stepper-drivers).
+[SET_TMC_FIELD command](G-Codes.md#set_tmc_field).
 
 Each of these fields is defined in the Trinamic datasheet for each
 driver. These datasheets can be found on the
