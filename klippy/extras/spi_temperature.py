@@ -258,7 +258,7 @@ class ADS1118(SensorBase):
     def handle_fault(self, adc, fault):
         if fault & 0x02:
             self.report_fault("ADS1118 : fault error")
-    def calc_temp(self, adc, fault):
+    def calc_temp(self, adc):
         # Fix sign bit:
         if adc & 0x2000:
             adc = ((adc & 0x1FFF) + 1) * -1
@@ -277,7 +277,7 @@ class ADS1118B(SensorBase):
     def handle_fault(self, adc, fault):
         if fault & 0x02:
             self.report_fault("ADS1118 : fault error")
-    def calc_temp(self, adc, fault):
+    def calc_temp(self, adc):
         # Fix sign bit:
         if adc & 0x2000:
             adc = ((adc & 0x1FFF) + 1) * -1
