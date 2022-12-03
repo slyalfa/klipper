@@ -556,7 +556,8 @@ class MCU:
                     or self._serialport.startswith("/tmp/klipper_host_")):
                 self._baud = config.getint('baud', 250000, minval=2400)
         # Restarts
-        restart_methods = [None, 'mightyboard', 'arduino', 'cheetah', 'command', 'rpi_usb']
+        restart_methods = [None, 'mightyboard', 'arduino', 'cheetah',
+                           'command', 'rpi_usb']
         self._restart_method = 'command'
         if self._baud:
             rmethods = {m: m for m in restart_methods}
