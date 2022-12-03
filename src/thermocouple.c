@@ -14,7 +14,9 @@
 #include "spicmds.h" // spidev_transfer
 
 enum {
-    TS_CHIP_MAX31855, TS_CHIP_MAX31856, TS_CHIP_MAX31865, TS_CHIP_MAX6675, TS_CHIP_ADS1118, TS_CHIP_ADS1118B
+	TS_CHIP_MAX31855, TS_CHIP_MAX31856,
+	TS_CHIP_MAX31865, TS_CHIP_MAX6675,
+	TS_CHIP_ADS1118, TS_CHIP_ADS1118B
 };
 
 DECL_ENUMERATION("thermocouple_type", "MAX31855", TS_CHIP_MAX31855);
@@ -177,9 +179,12 @@ thermocouple_handle_ads1118(struct thermocouple_spi *spi
 
     uint8_t msg[3] [4] =
     {
-        {0x00 , 0x00 , 0x0c , 0x9a }, // 0x0c9a = ch Cold pullup 128SPS Continuous
-        {0x0c , 0x8a , 0x0c , 0x8a }, // 0x0c8a = ch 0 and 1 pullup 128SPS Continuous ±0.256 V
-        {0x00 , 0x00 , 0x3c , 0x8a }  // 2 and 3 pullup 128SPS Continuous ±0.256 V
+	    // 0x0c9a = ch Cold pullup 128SPS Continuous
+	    {0x00 , 0x00 , 0x0c , 0x9a },
+	    // 0x0c8a = ch 0 and 1 pullup 128SPS Continuous ±0.256 V
+	    {0x0c , 0x8a , 0x0c , 0x8a },
+	    // 2 and 3 pullup 128SPS Continuous ±0.256 V
+	    {0x00 , 0x00 , 0x3c , 0x8a }
     };
 
     spidev_transfer(spi->spi, 1, sizeof(msg[ads_mux]), msg[ads_mux]);
@@ -198,8 +203,9 @@ thermocouple_handle_ads1118(struct thermocouple_spi *spi
         value = (value >> 18) & 0x3fff;
 
         if (ads_mux == 0)
-		{
-			if (ads_cold_cnt <1 ) //update cold about every min
+	{
+			//update cold about every min
+			if (ads_cold_cnt <1 )
             {
                 ads_cold = (uint16_t)value * 0.05;
                 //sendf("debug_ads_cold  value=%hu" , ads_cold   );
@@ -214,22 +220,24 @@ thermocouple_handle_ads1118(struct thermocouple_spi *spi
         {
             if (0x2000 & value)
             {
-                ads_t0 =(uint16_t)( ads_cold - (0x1fff & (~(value - 1)))); // negitive temp
+		    // Negitive temp
+                ads_t0 =(uint16_t)( ads_cold - (0x1fff & (~(value - 1))));
             } else
                 ads_t0 = (uint16_t)(value + ads_cold);
             ads_mux = 2;
-		}
+	}
         else if (ads_mux == 2)
         {
             if (0x2000 & value)
             {
-                ads_t1 =(uint16_t)( ads_cold - (0x1fff & (~(value - 1)))); // negitive temp
+		    // Negitive temp
+                ads_t1 =(uint16_t)( ads_cold - (0x1fff & (~(value - 1))));
             } else
                 ads_t1 = (uint16_t)(value + ads_cold);
             ads_mux = 0;
         }
         thermocouple_respond(spi, next_begin_time, ads_t0, 0, oid);
-	}
+    }
 }
 static void
 thermocouple_handle_ads1118B(struct thermocouple_spi *spi
